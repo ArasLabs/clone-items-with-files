@@ -3,7 +3,8 @@ The methods in this import add functionality to for the CAD and Document Items t
 
 ## History
 This project and the following release notes have been migrated from the old Aras Projects page.
-|Release|Notes                                        |
+
+|Release|Notes|
 |-------|---------------------------------------------|
 |v1     |Cloning CAD and Document Item                |
 |v2     |Cloning CAD and Document Item updated for 9.4|
