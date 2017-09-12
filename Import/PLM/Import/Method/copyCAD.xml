@@ -1,0 +1,51 @@
+﻿<AML>
+ <Item type="Method" id="F3091871535C4D9B833CCD917DC9421A" action="add">
+  <execution_allowed_to keyed_name="World" type="Identity">A73B655731924CD0B027E4F4D5FCC0A9</execution_allowed_to>
+  <method_code><![CDATA[//Grant administrative priviledge for ApplySQL
+Aras.Server.Security.Identity adminIdentity = Aras.Server.Security.Identity.GetByName("Administrators");
+bool PermissionWasSet  = Aras.Server.Security.Permissions.GrantIdentity(adminIdentity);
+
+Innovator inn = this.getInnovator();
+string docID = this.getID();
+
+//Perform the copyAsNew on the CAD document creating the new CAD Document and 
+//referenced file (native_file)
+Item copyDoc = inn.newItem("CAD","copyAsNew");
+copyDoc.setID(docID);
+Item newDoc = copyDoc.apply();
+
+if (newDoc.isError())
+{
+	return newDoc;
+}
+
+//set is_current=1 (handles older generations of File)
+inn.applySQL("UPDATE [CAD] SET is_current = '1' WHERE [id]='"+newDoc.getID()+"'");
+
+//Fix the Copied CAD Document (create new native file, set viewable file to 
+//null, and unlock)
+Item fixNewDoc = inn.newItem("CAD", "edit");
+fixNewDoc.setID(newDoc.getID());
+fixNewDoc.setAttribute("version","0");
+
+//Make a copy of the native_file and set
+string natID = newDoc.getProperty("native_file","");
+if (natID !="")
+{
+	Item newNat = inn.newItem("file","copyAsNew");
+	newNat.setID(natID);
+	newNat=newNat.apply();
+	fixNewDoc.setPropertyItem("native_file",newNat);
+}
+//set viewable_file to null and unlock with Edit
+fixNewDoc.setProperty("viewable_file","");
+newDoc=fixNewDoc.apply();
+
+// remove administrative privledge for ApplySQL
+if (PermissionWasSet) Aras.Server.Security.Permissions.RevokeIdentity(adminIdentity);
+
+return newDoc;]]></method_code>
+  <method_type>C#</method_type>
+  <name>copyCAD</name>
+ </Item>
+</AML>

@@ -1,0 +1,98 @@
+﻿<AML>
+ <Item type="Method" id="91985D86B1AB49D98836A68D9117218C" action="add">
+  <execution_allowed_to keyed_name="World" type="Identity">A73B655731924CD0B027E4F4D5FCC0A9</execution_allowed_to>
+  <method_code><![CDATA[//Grant administrative priviledge for ApplySQL
+Aras.Server.Security.Identity adminIdentity = Aras.Server.Security.Identity.GetByName("Administrators");
+bool PermissionWasSet  = Aras.Server.Security.Permissions.GrantIdentity(adminIdentity);
+
+Innovator inn = this.getInnovator();
+string docID = this.getID();
+
+//Perform the copyAsNew on the document creating the new Document and 
+//Document relationships (i.e. Document File)
+Item copyDoc = inn.newItem("Document","copyAsNew");
+copyDoc.setID(docID);
+Item newDoc = copyDoc.apply();
+
+if (newDoc.isError())
+{
+	return newDoc;
+}
+
+//set is_current=1 (handles older generations of File)
+inn.applySQL("UPDATE [Document] SET is_current = '1' WHERE [id]='"+newDoc.getID()+"'");
+
+//Unlock the file
+Item fixNewDoc = inn.newItem("Document", "unlock");
+fixNewDoc.setID(newDoc.getID());
+fixNewDoc.setAttribute("version","0");
+newDoc=fixNewDoc.apply();
+
+// Get the Document File items for the original file
+Item oldDocFiles= inn.newItem("Document File","get");
+oldDocFiles.setProperty("source_id",newDoc.getID());
+oldDocFiles = oldDocFiles.apply();
+
+//get the Document File Items for teh copied file
+Item newDocFiles= inn.newItem("Document File","get");
+newDocFiles.setProperty("source_id",newDoc.getID());
+newDocFiles = newDocFiles.apply();
+
+string ofList="";  //stub for comma seperated list of the original files
+Hashtable OFNDF = new Hashtable(); //Hashtable to map Old file ID to new Doc File ID
+
+//Loop through the original document files to produce the old file list
+for (int j=0; j<oldDocFiles.getItemCount();j++)
+{
+	ofList+=oldDocFiles.getItemByIndex(j).getProperty("related_id")+",";
+} 
+ofList = ofList.Remove(ofList.LastIndexOf(","));
+string[] ofListArr = ofList.Split(',');
+
+//loop through the string array of Old Files to generate the old file->new doc file Hash
+foreach( string s in ofListArr)
+{
+    // Get the config_id of the old file
+    Item oldConfID = inn.applySQL("SELECT [config_id] FROM [file] WHERE [id]='"+s+"'");
+	string cid = oldConfID.getItemByIndex(0).getProperty("config_id");
+	
+	//loop through the new document files items
+	for (int k=0; k<newDocFiles.getItemCount();k++)
+	{
+		//get the new config_id of the file from the New Doc File rel and compare to the 
+		//config id from the old doc file rel and add values to hash
+		Item newConfID = inn.applySQL("SELECT [config_id] FROM [file] WHERE [id]='"+newDocFiles.getItemByIndex(k).getProperty("related_id")+"'");
+	    if (cid == newConfID.getItemByIndex(0).getProperty("config_id"))
+	    {
+	    	OFNDF.Add(s,newDocFiles.getItemByIndex(k).getID());
+	    	break;
+	    }
+	    else
+	    {
+	    	continue;
+	    }
+	}
+}
+
+//Loop through the hash table
+foreach (DictionaryEntry de2 in OFNDF)
+{
+	//Copy the file to create a new instance of the file (this is to have a 1->1 document->file relationship
+	Item copyFile = inn.newItem("File","copyAsNew");
+	copyFile.setID(de2.Key.ToString());
+	Item newFile = copyFile.apply();
+	
+	//Set the newly created file as the related_id on the new Document File rel
+	Item docFile = inn.newItem ("Document File","edit");
+	docFile.setID(de2.Value.ToString());
+	docFile.setProperty("related_id",newFile.getID());
+	docFile=docFile.apply();
+}
+// remove administrative privledge for ApplySQL
+if (PermissionWasSet) Aras.Server.Security.Permissions.RevokeIdentity(adminIdentity);
+
+return newDoc;]]></method_code>
+  <method_type>C#</method_type>
+  <name>copyDocument</name>
+ </Item>
+</AML>
