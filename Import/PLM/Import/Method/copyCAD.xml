@@ -18,9 +18,12 @@ if (newDoc.isError())
 {
 	return newDoc;
 }
+string newDocClass = newDoc.getProperty("classification","");
+newDocClass = newDocClass.Replace("Copy of ","");
+newDoc.setProperty("classification",newDocClass);
 
 //set is_current=1 (handles older generations of File)
-inn.applySQL("UPDATE [CAD] SET is_current = '1' WHERE [id]='"+newDoc.getID()+"'");
+inn.applySQL("UPDATE [CAD] SET is_current = '1', classification= '"+newDocClass+"' WHERE [id]='"+newDoc.getID()+"'");
 
 //Fix the Copied CAD Document (create new native file, set viewable file to 
 //null, and unlock)
