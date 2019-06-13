@@ -1,3 +1,8 @@
+># Archived Aras Community Project
+>This project has been migrated to GitHub from the old Aras Projects page (http://www.aras.com/projects). As an Archived project, this project is no longer being actively developed or maintained.
+
+>For current projects, please visit the new Aras Community Projects page on the updated Aras Community site: http://community.aras.com/projects
+
 # Methods to Clone Items with Files
 The methods in this import add functionality to for the CAD and Document Items that will allow users to create duplicate File items when they clone an Item with a relationship to File.
 
